@@ -48,4 +48,4 @@ app/src/main/java/com/example/monodim/
 
 ## 许可证
 
-MIT License
+GNU GPL v3.0 with Additional IP Protection Terms
