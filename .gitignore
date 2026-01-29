@@ -1,15 +1,28 @@
+# 编译产物
+build/
+app/build/
+.gradle/
+bin/
+gen/
+
+# IDE 配置
+.idea/
 *.iml
-.gradle
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
+.kotlin/
+
+# 本地机密文件
+local.properties
+
+# 排除所有图片截图素材
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# macOS
 .DS_Store
-/build
+
+# 其他
 /captures
 .externalNativeBuild
 .cxx
-local.properties
