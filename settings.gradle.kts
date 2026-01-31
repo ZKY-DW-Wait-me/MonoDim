@@ -1,9 +1,5 @@
 pluginManagement {
     repositories {
-        // 国内镜像源
-        maven { url = uri("https://maven.aliyun.com/repository/google") }
-        maven { url = uri("https://maven.aliyun.com/repository/public") }
-        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -13,16 +9,20 @@ pluginManagement {
         }
         mavenCentral()
         gradlePluginPortal()
+        // 国内镜像源
+        maven { url = uri("https://maven.aliyun.com/repository/google") }
+        maven { url = uri("https://maven.aliyun.com/repository/public") }
+        maven { url = uri("https://maven.aliyun.com/repository/gradle-plugin") }
     }
 }
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
+        google()
+        mavenCentral()
         // 国内镜像源
         maven { url = uri("https://maven.aliyun.com/repository/google") }
         maven { url = uri("https://maven.aliyun.com/repository/public") }
-        google()
-        mavenCentral()
     }
 }
 

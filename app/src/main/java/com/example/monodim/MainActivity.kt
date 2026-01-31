@@ -27,7 +27,10 @@ import com.example.monodim.databinding.ActivityMainBinding
 import com.google.ar.core.Anchor
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
+import com.google.ar.core.DepthPoint
 import com.google.ar.core.HitResult
+import com.google.ar.core.Plane
+import com.google.ar.core.Point
 import com.google.ar.core.Pose
 import com.google.ar.core.Session
 import com.google.ar.core.TrackingState
@@ -45,6 +48,9 @@ class MainActivity : AppCompatActivity() {
     
     private var anchor1: Anchor? = null
     private var anchor2: Anchor? = null
+    private val distanceSamples = ArrayDeque<Float>()
+    private var distanceUpdater: Runnable? = null
+    private val maxSamples = 10
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,9 +79,13 @@ class MainActivity : AppCompatActivity() {
         try {
             arSession = Session(this).apply {
                 val config = Config(this).apply {
-                    instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP
+                    instantPlacementMode = Config.InstantPlacementMode.DISABLED
+                    planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                     focusMode = Config.FocusMode.AUTO
                     lightEstimationMode = Config.LightEstimationMode.AMBIENT_INTENSITY
+                    if (isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                        depthMode = Config.DepthMode.AUTOMATIC
+                    }
                 }
                 configure(config)
             }
@@ -100,27 +110,17 @@ class MainActivity : AppCompatActivity() {
         if (frame.camera.trackingState != TrackingState.TRACKING) return
 
         try {
-            // 先尝试hitTest，如果没有就强制在相机前方放置
-            val hitResults = frame.hitTest(0.5f, 0.5f)
-            val anchor = if (hitResults.isNotEmpty()) {
-                hitResults.first().createAnchor()
-            } else {
-                // 强制在相机前方0.8米放置
-                val camera = frame.camera
-                val pose = camera.pose
-                val tx = pose.tx()
-                val ty = pose.ty()
-                val tz = pose.tz()
-                val zAxis = pose.zAxis
-                val forwardX = -zAxis[0]
-                val forwardY = -zAxis[1]
-                val forwardZ = -zAxis[2]
-                val targetPose = com.google.ar.core.Pose(
-                    floatArrayOf(tx + forwardX * 0.8f, ty + forwardY * 0.8f, tz + forwardZ * 0.8f),
-                    pose.rotationQuaternion
-                )
-                session.createAnchor(targetPose)
+            val view = binding.surfaceView
+            if (view.width <= 0 || view.height <= 0) return
+            val centerX = view.width * 0.5f
+            val centerY = view.height * 0.5f
+            val hitResults = frame.hitTest(centerX, centerY)
+            val bestHit = selectBestHit(hitResults)
+            if (bestHit == null) {
+                Toast.makeText(this, "请移动设备，等待平面识别", Toast.LENGTH_SHORT).show()
+                return
             }
+            val anchor = bestHit.createAnchor()
             
             if (anchor1 == null) {
                 anchor1 = anchor
@@ -128,7 +128,7 @@ class MainActivity : AppCompatActivity() {
             } else if (anchor2 == null) {
                 anchor2 = anchor
                 binding.point2Indicator.setBackgroundResource(R.drawable.dot_active)
-                showDistance()
+                startDistanceUpdates()
             } else {
                 anchor.detach()
             }
@@ -137,16 +137,42 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun showDistance() {
-        val p1 = anchor1?.pose ?: return
-        val p2 = anchor2?.pose ?: return
+    private fun startDistanceUpdates() {
+        distanceSamples.clear()
+        val updater = object : Runnable {
+            override fun run() {
+                val dist = computeDistanceCm() ?: return
+                pushDistanceSample(dist)
+                val avg = distanceSamples.average().toFloat()
+                binding.distanceText.text = String.format("%.1f cm", avg)
+                binding.surfaceView.postOnAnimation(this)
+            }
+        }
+        distanceUpdater = updater
+        binding.surfaceView.postOnAnimation(updater)
+    }
+
+    private fun stopDistanceUpdates() {
+        distanceUpdater?.let { binding.surfaceView.removeCallbacks(it) }
+        distanceUpdater = null
+        distanceSamples.clear()
+    }
+
+    private fun computeDistanceCm(): Float? {
+        val p1 = anchor1?.pose ?: return null
+        val p2 = anchor2?.pose ?: return null
         
         val dx = p2.tx() - p1.tx()
         val dy = p2.ty() - p1.ty()
         val dz = p2.tz() - p1.tz()
-        val dist = sqrt(dx*dx + dy*dy + dz*dz) * 100f
-        
-        binding.distanceText.text = String.format("%.1f cm", dist)
+        return sqrt(dx*dx + dy*dy + dz*dz) * 100f
+    }
+
+    private fun pushDistanceSample(value: Float) {
+        distanceSamples.addLast(value)
+        while (distanceSamples.size > maxSamples) {
+            distanceSamples.removeFirst()
+        }
     }
 
     private fun onReset() {
@@ -154,6 +180,7 @@ class MainActivity : AppCompatActivity() {
         anchor2?.detach()
         anchor1 = null
         anchor2 = null
+        stopDistanceUpdates()
         binding.point1Indicator.setBackgroundResource(R.drawable.dot_inactive)
         binding.point2Indicator.setBackgroundResource(R.drawable.dot_inactive)
         binding.distanceText.text = "0.0 cm"
@@ -170,6 +197,7 @@ class MainActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         try {
+            stopDistanceUpdates()
             binding.surfaceView.onPause()
             arSession?.pause()
         } catch (e: Exception) {}
@@ -178,6 +206,7 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         try {
+            stopDistanceUpdates()
             anchor1?.detach()
             anchor2?.detach()
             arSession?.close()
@@ -192,4 +221,24 @@ class MainActivity : AppCompatActivity() {
     private fun Pose.tx(): Float = translation[0]
     private fun Pose.ty(): Float = translation[1]
     private fun Pose.tz(): Float = translation[2]
+
+    private fun selectBestHit(hitResults: List<HitResult>): HitResult? {
+        if (hitResults.isEmpty()) return null
+        val planeHit = hitResults.firstOrNull { hit ->
+            val trackable = hit.trackable
+            trackable is Plane && trackable.isPoseInPolygon(hit.hitPose)
+        }
+        if (planeHit != null) return planeHit
+
+        val depthHit = hitResults.firstOrNull { hit ->
+            hit.trackable is DepthPoint
+        }
+        if (depthHit != null) return depthHit
+
+        val orientedPointHit = hitResults.firstOrNull { hit ->
+            val trackable = hit.trackable
+            trackable is Point && trackable.orientationMode == Point.OrientationMode.ESTIMATED_SURFACE_NORMAL
+        }
+        return orientedPointHit ?: hitResults.firstOrNull()
+    }
 }
