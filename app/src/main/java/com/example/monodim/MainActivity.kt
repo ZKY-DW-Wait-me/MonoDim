@@ -93,7 +93,9 @@ class MainActivity : AppCompatActivity() {
 
             sessionManager = ARSessionManager(arSession!!)
             binding.surfaceView.apply {
-                setEGLContextClientVersion(3)
+                setEGLContextClientVersion(2)
+                setEGLConfigChooser(8, 8, 8, 8, 16, 0)
+                preserveEGLContextOnPause = true
                 setRenderer(sessionManager)
                 renderMode = GLSurfaceView.RENDERMODE_CONTINUOUSLY
             }
