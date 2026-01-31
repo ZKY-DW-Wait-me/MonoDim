@@ -66,7 +66,7 @@ class BackgroundRenderer {
     private var program = 0
     private var textureId = -1
     private lateinit var vertexBuffer: FloatBuffer
-    private lateinit var texCoordBuffer: FloatBuffer
+    private lateinit var quadCoordsBuffer: FloatBuffer
     private lateinit var transformedTexCoords: FloatBuffer
 
     fun createOnGlThread() {
@@ -79,6 +79,16 @@ class BackgroundRenderer {
         GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId)
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_LINEAR)
         GLES20.glTexParameteri(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR)
+        GLES20.glTexParameteri(
+            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+            GLES20.GL_TEXTURE_WRAP_S,
+            GLES20.GL_CLAMP_TO_EDGE
+        )
+        GLES20.glTexParameteri(
+            GLES11Ext.GL_TEXTURE_EXTERNAL_OES,
+            GLES20.GL_TEXTURE_WRAP_T,
+            GLES20.GL_CLAMP_TO_EDGE
+        )
 
         // 编译着色器
         val vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, VERTEX_SHADER)
@@ -95,10 +105,10 @@ class BackgroundRenderer {
             .asFloatBuffer()
             .apply { put(VERTICES); position(0) }
 
-        texCoordBuffer = ByteBuffer.allocateDirect(TEX_COORDS.size * 4)
+        quadCoordsBuffer = ByteBuffer.allocateDirect(VERTICES.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
-            .apply { put(TEX_COORDS); position(0) }
+            .apply { put(VERTICES); position(0) }
 
         transformedTexCoords = ByteBuffer.allocateDirect(TEX_COORDS.size * 4)
             .order(ByteOrder.nativeOrder())
@@ -110,6 +120,7 @@ class BackgroundRenderer {
     fun draw(frame: Frame) {
         if (textureId == -1) return
 
+        GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT)
         // 禁用深度测试，让背景在最底层
         GLES20.glDisable(GLES20.GL_DEPTH_TEST)
 
@@ -123,9 +134,10 @@ class BackgroundRenderer {
         GLES20.glUniform1i(textureLoc, 0)
 
         // 变换纹理坐标（处理屏幕旋转）
+        quadCoordsBuffer.position(0)
         frame.transformCoordinates2d(
             Coordinates2d.OPENGL_NORMALIZED_DEVICE_COORDINATES,
-            texCoordBuffer,
+            quadCoordsBuffer,
             Coordinates2d.TEXTURE_NORMALIZED,
             transformedTexCoords
         )
