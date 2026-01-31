@@ -79,7 +79,8 @@ class MainActivity : AppCompatActivity() {
         try {
             arSession = Session(this).apply {
                 val config = Config(this).apply {
-                    instantPlacementMode = Config.InstantPlacementMode.DISABLED
+                    // Allow quick placement even before planes are detected.
+                    instantPlacementMode = Config.InstantPlacementMode.LOCAL_Y_UP
                     planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
                     focusMode = Config.FocusMode.AUTO
                     lightEstimationMode = Config.LightEstimationMode.AMBIENT_INTENSITY
@@ -143,8 +144,8 @@ class MainActivity : AppCompatActivity() {
             override fun run() {
                 val dist = computeDistanceCm() ?: return
                 pushDistanceSample(dist)
-                val avg = distanceSamples.average().toFloat()
-                binding.distanceText.text = String.format("%.1f cm", avg)
+                val display = robustAverage(distanceSamples)
+                binding.distanceText.text = String.format("%.1f cm", display)
                 binding.surfaceView.postOnAnimation(this)
             }
         }
@@ -161,6 +162,8 @@ class MainActivity : AppCompatActivity() {
     private fun computeDistanceCm(): Float? {
         val p1 = anchor1?.pose ?: return null
         val p2 = anchor2?.pose ?: return null
+        if (anchor1?.trackingState != TrackingState.TRACKING) return null
+        if (anchor2?.trackingState != TrackingState.TRACKING) return null
         
         val dx = p2.tx() - p1.tx()
         val dy = p2.ty() - p1.ty()
@@ -170,8 +173,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun pushDistanceSample(value: Float) {
         distanceSamples.addLast(value)
-        while (distanceSamples.size > maxSamples) {
-            distanceSamples.removeFirst()
+        while (distanceSamples.size > maxSamples) distanceSamples.removeFirst()
+    }
+
+    private fun robustAverage(samples: Collection<Float>): Float {
+        if (samples.isEmpty()) return 0f
+        val sorted = samples.sorted()
+        val median = if (sorted.size % 2 == 1) {
+            sorted[sorted.size / 2]
+        } else {
+            (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) * 0.5f
+        }
+        val tolerance = maxOf(2.0f, median * 0.02f)
+        val filtered = sorted.filter { kotlin.math.abs(it - median) <= tolerance }
+        return if (filtered.isNotEmpty()) {
+            filtered.average().toFloat()
+        } else {
+            median
         }
     }
 
