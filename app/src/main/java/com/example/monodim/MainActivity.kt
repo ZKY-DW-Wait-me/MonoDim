@@ -84,6 +84,7 @@ class MainActivity : AppCompatActivity() {
     private var trackingStatusUpdater: Runnable? = null
     private var vibrator: Vibrator? = null
     private var currentUnit: MeasurementUnit = MeasurementUnit.CM
+    private var isUsingInstantPlacement = false  // 标记是否使用了Instant Placement
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -349,63 +350,50 @@ class MainActivity : AppCompatActivity() {
             val centerX = view.width * 0.5f
             val centerY = view.height * 0.5f
 
-            // 策略1: 先尝试常规hitTest
+            // 策略1: 先尝试常规hitTest（精确）
             var anchor: Anchor? = null
+            var usedInstantPlacement = false
             try {
                 val hitResults = frame.hitTest(centerX, centerY)
                 val bestHit = selectBestHit(hitResults)
                 if (bestHit != null) {
                     anchor = bestHit.createAnchor()
+                    Log.d(TAG, "使用常规hitTest放置点")
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "常规hitTest失败", e)
             }
 
-            // 策略2: 如果常规hitTest失败，使用Instant Placement（估算深度1.5米）
+            // 策略2: 如果常规hitTest失败，使用Instant Placement
+            // ARCore会自动修正深度，初始估算1.5米
             if (anchor == null) {
                 try {
                     val instantHits = frame.hitTestInstantPlacement(centerX, centerY, 1.5f)
                     if (instantHits.isNotEmpty()) {
                         anchor = instantHits[0].createAnchor()
-                        Log.d(TAG, "使用Instant Placement放置点")
+                        usedInstantPlacement = true
+                        Log.d(TAG, "使用Instant Placement放置点（深度会自动修正）")
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "Instant Placement失败", e)
                 }
             }
 
-            // 策略3: 如果还是失败，基于相机位置创建锚点（最后手段）
             if (anchor == null) {
-                try {
-                    val cameraPose = camera.pose
-                    // 在相机前方1.5米处创建锚点
-                    val forward = floatArrayOf(0f, 0f, -1.5f)
-                    val rotated = cameraPose.rotateVector(forward)
-                    val anchorPose = Pose(
-                        floatArrayOf(
-                            cameraPose.tx() + rotated[0],
-                            cameraPose.ty() + rotated[1],
-                            cameraPose.tz() + rotated[2]
-                        ),
-                        cameraPose.rotationQuaternion
-                    )
-                    anchor = session.createAnchor(anchorPose)
-                    Log.d(TAG, "使用相机前方位置放置点")
-                } catch (e: Exception) {
-                    Log.e(TAG, "创建锚点完全失败", e)
-                    showToast("放置失败，请稍后重试")
-                    vibrateError()
-                    return
-                }
+                showToast(getString(R.string.error_aim_at_surface))
+                vibrateError()
+                return
             }
 
             if (anchor1 == null) {
                 anchor1 = anchor
+                if (usedInstantPlacement) isUsingInstantPlacement = true
                 binding.point1Indicator.setBackgroundResource(R.drawable.dot_active)
                 vibrateSuccess()
                 updateHintText()
             } else if (anchor2 == null) {
                 anchor2 = anchor
+                if (usedInstantPlacement) isUsingInstantPlacement = true
                 binding.point2Indicator.setBackgroundResource(R.drawable.dot_active)
                 vibrateSuccess()
                 updateHintText()
@@ -422,17 +410,46 @@ class MainActivity : AppCompatActivity() {
 
     private fun startDistanceUpdates() {
         distanceSamples.clear()
+        if (isUsingInstantPlacement) {
+            binding.distanceText.text = "稳定中..."
+            binding.distanceText.setTextColor(0xFFFFEB3B.toInt()) // 黄色
+        }
         val updater = object : Runnable {
             override fun run() {
-                val dist = computeDistanceCm() ?: return
+                val dist = computeDistanceCm()
+                if (dist == null) {
+                    binding.surfaceView.postOnAnimation(this)
+                    return
+                }
                 pushDistanceSample(dist)
-                val display = robustAverage(distanceSamples)
-                updateDistanceDisplay(display)
+
+                // 检查测量是否稳定（需要足够样本且方差小）
+                val isStable = checkMeasurementStability()
+
+                if (isUsingInstantPlacement && !isStable && distanceSamples.size < 15) {
+                    // 还在稳定中
+                    binding.distanceText.text = "稳定中... ${distanceSamples.size}/15"
+                    binding.distanceText.setTextColor(0xFFFFEB3B.toInt())
+                } else {
+                    // 显示测量值
+                    val display = robustAverage(distanceSamples)
+                    binding.distanceText.setTextColor(0xFF00FF00.toInt()) // 绿色
+                    updateDistanceDisplay(display)
+                }
                 binding.surfaceView.postOnAnimation(this)
             }
         }
         distanceUpdater = updater
         binding.surfaceView.postOnAnimation(updater)
+    }
+
+    private fun checkMeasurementStability(): Boolean {
+        if (distanceSamples.size < 10) return false
+        val recent = distanceSamples.takeLast(10)
+        val avg = recent.average().toFloat()
+        val maxDev = recent.maxOf { kotlin.math.abs(it - avg) }
+        // 如果最大偏差小于平均值的5%，认为稳定
+        return maxDev < avg * 0.05f
     }
 
     private fun stopDistanceUpdates() {
@@ -499,7 +516,9 @@ class MainActivity : AppCompatActivity() {
         anchor2?.detach()
         anchor1 = null
         anchor2 = null
+        isUsingInstantPlacement = false
         stopDistanceUpdates()
+        binding.distanceText.setTextColor(0xFF00FF00.toInt()) // 恢复绿色
         binding.point1Indicator.setBackgroundResource(R.drawable.dot_inactive)
         binding.point2Indicator.setBackgroundResource(R.drawable.dot_inactive)
         updateDistanceDisplay(0f)
