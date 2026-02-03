@@ -282,7 +282,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun cycleUnit() {
-        val units = MeasurementUnit.entries
+        val units = MeasurementUnit.values()
         val currentIndex = units.indexOf(currentUnit)
         currentUnit = units[(currentIndex + 1) % units.size]
         saveUnit()
@@ -326,25 +326,46 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        if (frame.camera.trackingState != TrackingState.TRACKING) {
-            showToast(getString(R.string.error_move_device))
-            vibrateError()
-            return
-        }
-
         try {
+            // 检查相机跟踪状态
+            val camera = frame.camera
+            if (camera.trackingState != TrackingState.TRACKING) {
+                showToast(getString(R.string.error_move_device))
+                vibrateError()
+                return
+            }
+
             val view = binding.surfaceView
             if (view.width <= 0 || view.height <= 0) return
             val centerX = view.width * 0.5f
             val centerY = view.height * 0.5f
-            val hitResults = frame.hitTest(centerX, centerY)
+
+            val hitResults: List<HitResult>
+            try {
+                hitResults = frame.hitTest(centerX, centerY)
+            } catch (e: Exception) {
+                Log.w(TAG, "hitTest失败，帧可能已过期", e)
+                showToast(getString(R.string.error_aim_at_surface))
+                vibrateError()
+                return
+            }
+
             val bestHit = selectBestHit(hitResults)
             if (bestHit == null) {
                 showToast(getString(R.string.error_aim_at_surface))
                 vibrateError()
                 return
             }
-            val anchor = bestHit.createAnchor()
+
+            val anchor: Anchor
+            try {
+                anchor = bestHit.createAnchor()
+            } catch (e: Exception) {
+                Log.w(TAG, "创建锚点失败", e)
+                showToast(getString(R.string.error_anchor_failed))
+                vibrateError()
+                return
+            }
 
             // 验证锚点跟踪状态
             if (anchor.trackingState != TrackingState.TRACKING) {

@@ -11,8 +11,8 @@ android {
         applicationId = "com.example.monodim"
         minSdk = 24
         targetSdk = 33
-        versionCode = 10
-        versionName = "3.0.0"
+        versionCode = 11
+        versionName = "3.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tree -L:*)",
+      "Bash(git -C \"D:\\\\vscode\\\\project_AR-Leads\" log --oneline -15)",
+      "Bash(D:)",
+      "Bash(gradlew.bat assembleDebug)",
+      "Bash(cmd /c \"cd /d D:\\\\vscode\\\\project_AR-Leads && gradlew.bat assembleDebug\")",
+      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; .\\\\gradlew.bat assembleDebug\")",
+      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git status\")",
+      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git add app/build.gradle.kts app/src/main/java/com/example/monodim/MainActivity.kt app/src/main/java/com/example/monodim/ar/BackgroundRenderer.kt app/src/main/res/layout/activity_main.xml app/src/main/res/values/strings.xml app/src/main/res/values-en/\")",
+      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git commit -m ''feat: v3.0.0 - 全面改进AR测量应用\n\nPhase 1 \\(v2.0.0\\): 修复白屏问题\n- 修复BackgroundRenderer缓冲区初始化\n- 添加着色器程序链接验证\n- 添加GL错误检查\n\nPhase 2 \\(v2.1.0\\): 提升测量准确性\n- 样本数从10增加到30\n- 添加锚点跟踪状态验证\n- 添加距离边界检查\\(1cm-10m\\)\n- 改进IQR异常值检测\n- 放宽平面命中检测\n\nPhase 3 \\(v2.2.0\\): 错误处理与稳定性\n- 完善ARCore可用性检查\n- 改进异常处理和用户提示\n- 优化生命周期管理\n\nPhase 4 \\(v2.3.0\\): UI/UX改进\n- 添加跟踪状态指示器\n- 添加操作提示文字\n- 添加触觉反馈\n- 准星颜色随状态变化\n\nPhase 5 \\(v3.0.0\\): 商业功能\n- 单位切换\\(厘米/米/英寸/英尺\\)\n- 多语言支持\\(中/英\\)''\")",
+      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git tag v3.0.0\")",
+      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git push origin main --tags\")",
+      "Bash(powershell -Command \"if \\(!\\(Test-Path ''D:\\\\vscode\\\\project_AR-Leads\\\\release''\\)\\) { New-Item -ItemType Directory -Path ''D:\\\\vscode\\\\project_AR-Leads\\\\release'' }; Copy-Item ''D:\\\\vscode\\\\project_AR-Leads\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk'' ''D:\\\\vscode\\\\project_AR-Leads\\\\release\\\\MonoDim-v3.0.0-debug.apk''\")",
+      "Bash(powershell -Command \"New-Item -ItemType Directory -Force -Path ''D:\\\\vscode\\\\project_AR-Leads\\\\release''; Copy-Item ''D:\\\\vscode\\\\project_AR-Leads\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk'' ''D:\\\\vscode\\\\project_AR-Leads\\\\release\\\\MonoDim-v3.0.0-debug.apk''\")",
+      "Bash(powershell -Command \"Get-ChildItem ''D:\\\\vscode\\\\project_AR-Leads\\\\release''\")",
+      "Bash(powershell -Command \"adb logcat -d | Select-String -Pattern ''MonoDim|FATAL|AndroidRuntime'' | Select-Object -Last 50\")",
+      "Bash(powershell -Command \"Copy-Item ''D:\\\\vscode\\\\project_AR-Leads\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk'' ''D:\\\\vscode\\\\project_AR-Leads\\\\release\\\\MonoDim-v3.0.1-debug.apk'' -Force\")",
+      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git add -A; git commit -m ''fix: v3.0.1 - 修复点击+号崩溃问题\n\n- 添加hitTest异常捕获防止帧过期崩溃\n- 添加createAnchor异常捕获\n- 将MeasurementUnit.entries改为values\\(\\)提高兼容性\n- 改进camera.trackingState访问安全性''\")"
+    ]
+  }
+}
