@@ -108,4 +108,18 @@
             android:background="@drawable/dot_inactive" />
     </LinearLayout>
 
+    <!-- 调试信息 -->
+    <TextView
+        android:id="@+id/debugInfo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:layout_marginBottom="180dp"
+        android:background="#AA000000"
+        android:padding="8dp"
+        android:textColor="#FFFFFF"
+        android:textSize="11sp"
+        android:fontFamily="monospace"
+        android:text="调试信息加载中..." />
+
 </FrameLayout>

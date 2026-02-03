@@ -111,9 +111,8 @@ class MainActivity : AppCompatActivity() {
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), CAMERA_PERMISSION_REQUEST)
-        } else {
-            initAR()
         }
+        // AR初始化移到onResume中，确保Activity完全就绪
     }
 
     private fun initAR() {
@@ -265,11 +264,70 @@ class MainActivity : AppCompatActivity() {
         val updater = object : Runnable {
             override fun run() {
                 updateTrackingStatus()
+                updateDebugInfo()
                 binding.surfaceView.postDelayed(this, 200)
             }
         }
         trackingStatusUpdater = updater
         binding.surfaceView.post(updater)
+    }
+
+    private fun updateDebugInfo() {
+        val frame = sessionManager?.currentFrame
+        val session = arSession
+        if (frame == null || session == null) {
+            binding.debugInfo.text = "等待AR初始化..."
+            return
+        }
+
+        val sb = StringBuilder()
+
+        // 深度支持
+        val depthSupported = session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
+        sb.append("深度API: ${if (depthSupported) "支持" else "不支持"}\n")
+
+        // 平面数量
+        val planes = session.getAllTrackables(Plane::class.java)
+        val trackingPlanes = planes.filter { it.trackingState == TrackingState.TRACKING }
+        sb.append("平面: ${trackingPlanes.size}个跟踪中 / ${planes.size}个总计\n")
+
+        // hitTest结果
+        try {
+            val view = binding.surfaceView
+            if (view.width > 0 && view.height > 0) {
+                val centerX = view.width * 0.5f
+                val centerY = view.height * 0.5f
+                val hits = frame.hitTest(centerX, centerY)
+
+                if (hits.isEmpty()) {
+                    sb.append("命中: 无\n")
+                } else {
+                    val types = hits.map { hit ->
+                        when (val t = hit.trackable) {
+                            is Plane -> "平面"
+                            is DepthPoint -> "深度点"
+                            is Point -> if (t.orientationMode == Point.OrientationMode.ESTIMATED_SURFACE_NORMAL) "特征点(法线)" else "特征点"
+                            is InstantPlacementPoint -> "即时点"
+                            else -> "其他"
+                        }
+                    }.distinct()
+                    sb.append("命中: ${hits.size}个 [${types.joinToString(", ")}]\n")
+                }
+
+                // Instant Placement测试
+                val instantHits = frame.hitTestInstantPlacement(centerX, centerY, 1.5f)
+                sb.append("即时放置: ${if (instantHits.isNotEmpty()) "可用" else "不可用"}\n")
+            }
+        } catch (e: Exception) {
+            sb.append("命中测试: 错误\n")
+        }
+
+        // 锚点状态
+        val a1State = anchor1?.trackingState?.name ?: "无"
+        val a2State = anchor2?.trackingState?.name ?: "无"
+        sb.append("锚点: P1=$a1State, P2=$a2State")
+
+        binding.debugInfo.text = sb.toString()
     }
 
     private fun stopTrackingStatusUpdates() {
@@ -350,29 +408,34 @@ class MainActivity : AppCompatActivity() {
             val centerX = view.width * 0.5f
             val centerY = view.height * 0.5f
 
-            // 策略1: 先尝试常规hitTest（精确）
             var anchor: Anchor? = null
             var usedInstantPlacement = false
+
+            // 策略1: 常规hitTest - 直接遍历所有结果尝试创建锚点
             try {
                 val hitResults = frame.hitTest(centerX, centerY)
-                val bestHit = selectBestHit(hitResults)
-                if (bestHit != null) {
-                    anchor = bestHit.createAnchor()
-                    Log.d(TAG, "使用常规hitTest放置点")
+                for (hit in hitResults) {
+                    try {
+                        anchor = hit.createAnchor()
+                        Log.d(TAG, "hitTest成功: ${hit.trackable.javaClass.simpleName}")
+                        break
+                    } catch (e: Exception) {
+                        Log.w(TAG, "createAnchor失败: ${hit.trackable.javaClass.simpleName}", e)
+                        continue
+                    }
                 }
             } catch (e: Exception) {
-                Log.w(TAG, "常规hitTest失败", e)
+                Log.w(TAG, "hitTest异常", e)
             }
 
-            // 策略2: 如果常规hitTest失败，使用Instant Placement
-            // ARCore会自动修正深度，初始估算1.5米
+            // 策略2: Instant Placement
             if (anchor == null) {
                 try {
                     val instantHits = frame.hitTestInstantPlacement(centerX, centerY, 1.5f)
                     if (instantHits.isNotEmpty()) {
                         anchor = instantHits[0].createAnchor()
                         usedInstantPlacement = true
-                        Log.d(TAG, "使用Instant Placement放置点（深度会自动修正）")
+                        Log.d(TAG, "Instant Placement成功")
                     }
                 } catch (e: Exception) {
                     Log.w(TAG, "Instant Placement失败", e)
@@ -380,7 +443,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             if (anchor == null) {
-                showToast(getString(R.string.error_aim_at_surface))
+                showToast("放置失败，请对准有纹理的表面")
                 vibrateError()
                 return
             }
@@ -534,18 +597,28 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
-        // 尝试初始化AR（处理从ARCore安装返回的情况）
+        // 初始化或恢复AR
         if (!arInitialized) {
             initAR()
-        }
-
-        try {
-            arSession?.resume()
-            binding.surfaceView.onResume()
-            startTrackingStatusUpdates()
-        } catch (e: Exception) {
-            Log.e(TAG, "AR会话恢复失败", e)
-            showToast(getString(R.string.error_ar_resume_failed))
+            // initAR成功后会设置arInitialized=true，此时需要resume
+            if (arInitialized) {
+                try {
+                    arSession?.resume()
+                    binding.surfaceView.onResume()
+                    startTrackingStatusUpdates()
+                } catch (e: Exception) {
+                    Log.e(TAG, "AR首次resume失败", e)
+                }
+            }
+        } else {
+            try {
+                arSession?.resume()
+                binding.surfaceView.onResume()
+                startTrackingStatusUpdates()
+            } catch (e: Exception) {
+                Log.e(TAG, "AR会话恢复失败", e)
+                showToast(getString(R.string.error_ar_resume_failed))
+            }
         }
     }
 
