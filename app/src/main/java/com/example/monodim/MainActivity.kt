@@ -36,6 +36,7 @@ import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
 import com.google.ar.core.DepthPoint
 import com.google.ar.core.HitResult
+import com.google.ar.core.InstantPlacementPoint
 import com.google.ar.core.Plane
 import com.google.ar.core.Point
 import com.google.ar.core.Pose
@@ -348,39 +349,54 @@ class MainActivity : AppCompatActivity() {
             val centerX = view.width * 0.5f
             val centerY = view.height * 0.5f
 
-            val hitResults: List<HitResult>
+            // 策略1: 先尝试常规hitTest
+            var anchor: Anchor? = null
             try {
-                hitResults = frame.hitTest(centerX, centerY)
+                val hitResults = frame.hitTest(centerX, centerY)
+                val bestHit = selectBestHit(hitResults)
+                if (bestHit != null) {
+                    anchor = bestHit.createAnchor()
+                }
             } catch (e: Exception) {
-                Log.w(TAG, "hitTest失败，帧可能已过期", e)
-                showToast(getString(R.string.error_aim_at_surface))
-                vibrateError()
-                return
+                Log.w(TAG, "常规hitTest失败", e)
             }
 
-            val bestHit = selectBestHit(hitResults)
-            if (bestHit == null) {
-                showToast(getString(R.string.error_aim_at_surface))
-                vibrateError()
-                return
+            // 策略2: 如果常规hitTest失败，使用Instant Placement（估算深度1.5米）
+            if (anchor == null) {
+                try {
+                    val instantHits = frame.hitTestInstantPlacement(centerX, centerY, 1.5f)
+                    if (instantHits.isNotEmpty()) {
+                        anchor = instantHits[0].createAnchor()
+                        Log.d(TAG, "使用Instant Placement放置点")
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "Instant Placement失败", e)
+                }
             }
 
-            val anchor: Anchor
-            try {
-                anchor = bestHit.createAnchor()
-            } catch (e: Exception) {
-                Log.w(TAG, "创建锚点失败", e)
-                showToast(getString(R.string.error_anchor_failed))
-                vibrateError()
-                return
-            }
-
-            // 验证锚点跟踪状态
-            if (anchor.trackingState != TrackingState.TRACKING) {
-                anchor.detach()
-                showToast(getString(R.string.error_anchor_failed))
-                vibrateError()
-                return
+            // 策略3: 如果还是失败，基于相机位置创建锚点（最后手段）
+            if (anchor == null) {
+                try {
+                    val cameraPose = camera.pose
+                    // 在相机前方1.5米处创建锚点
+                    val forward = floatArrayOf(0f, 0f, -1.5f)
+                    val rotated = cameraPose.rotateVector(forward)
+                    val anchorPose = Pose(
+                        floatArrayOf(
+                            cameraPose.tx() + rotated[0],
+                            cameraPose.ty() + rotated[1],
+                            cameraPose.tz() + rotated[2]
+                        ),
+                        cameraPose.rotationQuaternion
+                    )
+                    anchor = session.createAnchor(anchorPose)
+                    Log.d(TAG, "使用相机前方位置放置点")
+                } catch (e: Exception) {
+                    Log.e(TAG, "创建锚点完全失败", e)
+                    showToast("放置失败，请稍后重试")
+                    vibrateError()
+                    return
+                }
             }
 
             if (anchor1 == null) {
