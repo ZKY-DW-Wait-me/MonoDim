@@ -17,7 +17,9 @@
       "Bash(powershell -Command \"Get-ChildItem ''D:\\\\vscode\\\\project_AR-Leads\\\\release''\")",
       "Bash(powershell -Command \"adb logcat -d | Select-String -Pattern ''MonoDim|FATAL|AndroidRuntime'' | Select-Object -Last 50\")",
       "Bash(powershell -Command \"Copy-Item ''D:\\\\vscode\\\\project_AR-Leads\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk'' ''D:\\\\vscode\\\\project_AR-Leads\\\\release\\\\MonoDim-v3.0.1-debug.apk'' -Force\")",
-      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git add -A; git commit -m ''fix: v3.0.1 - 修复点击+号崩溃问题\n\n- 添加hitTest异常捕获防止帧过期崩溃\n- 添加createAnchor异常捕获\n- 将MeasurementUnit.entries改为values\\(\\)提高兼容性\n- 改进camera.trackingState访问安全性''\")"
+      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git add -A; git commit -m ''fix: v3.0.1 - 修复点击+号崩溃问题\n\n- 添加hitTest异常捕获防止帧过期崩溃\n- 添加createAnchor异常捕获\n- 将MeasurementUnit.entries改为values\\(\\)提高兼容性\n- 改进camera.trackingState访问安全性''\")",
+      "Bash(powershell -Command \"Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git tag v3.0.1; git push origin main --tags\")",
+      "Bash(powershell -Command \"Copy-Item ''D:\\\\vscode\\\\project_AR-Leads\\\\app\\\\build\\\\outputs\\\\apk\\\\debug\\\\app-debug.apk'' ''D:\\\\vscode\\\\project_AR-Leads\\\\release\\\\MonoDim-v3.0.2-debug.apk'' -Force; Set-Location ''D:\\\\vscode\\\\project_AR-Leads''; git add -A; git commit -m ''fix: v3.0.2 - 修复振动导致崩溃\n\n- 添加VIBRATE权限到AndroidManifest\n- 振动函数添加try-catch防止崩溃''; git tag v3.0.2; git push origin main --tags\")"
     ]
   }
 }

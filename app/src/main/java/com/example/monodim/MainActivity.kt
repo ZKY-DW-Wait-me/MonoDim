@@ -193,24 +193,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun vibrateSuccess() {
-        vibrator?.let { v ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                v.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
-            } else {
-                @Suppress("DEPRECATION")
-                v.vibrate(50)
+        try {
+            vibrator?.let { v ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    v.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+                } else {
+                    @Suppress("DEPRECATION")
+                    v.vibrate(50)
+                }
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "振动失败", e)
         }
     }
 
     private fun vibrateError() {
-        vibrator?.let { v ->
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                v.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 30, 50, 30), -1))
-            } else {
-                @Suppress("DEPRECATION")
-                v.vibrate(longArrayOf(0, 30, 50, 30), -1)
+        try {
+            vibrator?.let { v ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    v.vibrate(VibrationEffect.createWaveform(longArrayOf(0, 30, 50, 30), -1))
+                } else {
+                    @Suppress("DEPRECATION")
+                    v.vibrate(longArrayOf(0, 30, 50, 30), -1)
+                }
             }
+        } catch (e: Exception) {
+            Log.w(TAG, "振动失败", e)
         }
     }
 
