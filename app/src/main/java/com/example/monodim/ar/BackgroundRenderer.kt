@@ -12,9 +12,9 @@
 
 package com.example.monodim.ar
 
-import android.content.Context
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
+import android.util.Log
 import com.google.ar.core.Coordinates2d
 import com.google.ar.core.Frame
 import java.nio.ByteBuffer
@@ -99,20 +99,35 @@ class BackgroundRenderer {
         GLES20.glAttachShader(program, fragmentShader)
         GLES20.glLinkProgram(program)
 
+        // 验证着色器程序链接状态
+        val linkStatus = IntArray(1)
+        GLES20.glGetProgramiv(program, GLES20.GL_LINK_STATUS, linkStatus, 0)
+        if (linkStatus[0] == 0) {
+            val error = GLES20.glGetProgramInfoLog(program)
+            GLES20.glDeleteProgram(program)
+            throw RuntimeException("Program链接失败: $error")
+        }
+        checkGlError("Program链接")
+
         // 创建顶点缓冲区
         vertexBuffer = ByteBuffer.allocateDirect(VERTICES.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
             .apply { put(VERTICES); position(0) }
 
+        // quadCoordsBuffer用于存储NDC坐标供transformCoordinates2d使用
         quadCoordsBuffer = ByteBuffer.allocateDirect(VERTICES.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
             .apply { put(VERTICES); position(0) }
 
+        // transformedTexCoords需要初始化默认值
         transformedTexCoords = ByteBuffer.allocateDirect(TEX_COORDS.size * 4)
             .order(ByteOrder.nativeOrder())
             .asFloatBuffer()
+            .apply { put(TEX_COORDS); position(0) }
+
+        checkGlError("缓冲区初始化")
     }
 
     fun getTextureId(): Int = textureId
@@ -164,7 +179,7 @@ class BackgroundRenderer {
         val shader = GLES20.glCreateShader(type)
         GLES20.glShaderSource(shader, code)
         GLES20.glCompileShader(shader)
-        
+
         val compiled = IntArray(1)
         GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, compiled, 0)
         if (compiled[0] == 0) {
@@ -173,5 +188,13 @@ class BackgroundRenderer {
             throw RuntimeException("Shader编译失败: $error")
         }
         return shader
+    }
+
+    private fun checkGlError(operation: String) {
+        val error = GLES20.glGetError()
+        if (error != GLES20.GL_NO_ERROR) {
+            Log.e("BackgroundRenderer", "GL错误 [$operation]: $error")
+            throw RuntimeException("GL错误 [$operation]: $error")
+        }
     }
 }

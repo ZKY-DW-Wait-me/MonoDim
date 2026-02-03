@@ -1,3 +1,34 @@
 <resources>
     <string name="app_name">MonoDim</string>
+
+    <!-- 跟踪状态 -->
+    <string name="status_initializing">初始化中...</string>
+    <string name="status_tracking">正在跟踪</string>
+    <string name="status_searching">搜索平面中...</string>
+    <string name="status_not_tracking">跟踪丢失</string>
+
+    <!-- 操作提示 -->
+    <string name="hint_place_first_point">点击 + 放置第一个点</string>
+    <string name="hint_place_second_point">点击 + 放置第二个点</string>
+    <string name="hint_measuring">测量中</string>
+
+    <!-- 按钮 -->
+    <string name="btn_reset">重置</string>
+
+    <!-- 错误消息 -->
+    <string name="error_ar_not_initialized">AR未初始化</string>
+    <string name="error_waiting_ar">等待AR就绪...</string>
+    <string name="error_move_device">请缓慢移动设备以建立跟踪</string>
+    <string name="error_aim_at_surface">请将准星对准平面</string>
+    <string name="error_anchor_failed">锚点创建失败，请重试</string>
+    <string name="error_placement_failed">放置失败，请重试</string>
+    <string name="error_camera_permission">需要相机权限才能使用AR功能</string>
+    <string name="error_device_not_supported">此设备不支持AR功能</string>
+    <string name="error_install_arcore">请安装ARCore</string>
+    <string name="error_update_arcore">请更新ARCore</string>
+    <string name="error_update_app">请更新应用</string>
+    <string name="error_ar_resume_failed">AR恢复失败，请重启应用</string>
+
+    <!-- 提示消息 -->
+    <string name="toast_first_point_set">第一点已设置</string>
 </resources>

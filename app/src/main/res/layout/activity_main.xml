@@ -18,6 +18,20 @@
         android:layout_gravity="center"
         android:background="@drawable/reticle_active" />
 
+    <!-- 跟踪状态指示器 -->
+    <TextView
+        android:id="@+id/trackingStatus"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal|top"
+        android:layout_marginTop="16dp"
+        android:background="#CC000000"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="8dp"
+        android:text="@string/status_initializing"
+        android:textColor="#FFEB3B"
+        android:textSize="14sp" />
+
     <!-- 距离显示 -->
     <TextView
         android:id="@+id/distanceText"
@@ -32,6 +46,20 @@
         android:textColor="#00FF00"
         android:textSize="36sp"
         android:textStyle="bold" />
+
+    <!-- 操作提示 -->
+    <TextView
+        android:id="@+id/hintText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="120dp"
+        android:background="#80000000"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="6dp"
+        android:text="@string/hint_place_first_point"
+        android:textColor="#FFFFFF"
+        android:textSize="14sp" />
 
     <!-- + 按钮 -->
     <Button
@@ -53,7 +81,7 @@
         android:layout_gravity="bottom|end"
         android:layout_margin="16dp"
         android:backgroundTint="#FF5722"
-        android:text="重置"
+        android:text="@string/btn_reset"
         android:textColor="#FFFFFF" />
 
     <!-- 点指示器 -->

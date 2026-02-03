@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">MonoDim</string>
+
+    <!-- Tracking status -->
+    <string name="status_initializing">Initializing...</string>
+    <string name="status_tracking">Tracking</string>
+    <string name="status_searching">Searching for surfaces...</string>
+    <string name="status_not_tracking">Tracking lost</string>
+
+    <!-- Hints -->
+    <string name="hint_place_first_point">Tap + to place first point</string>
+    <string name="hint_place_second_point">Tap + to place second point</string>
+    <string name="hint_measuring">Measuring</string>
+
+    <!-- Buttons -->
+    <string name="btn_reset">Reset</string>
+
+    <!-- Error messages -->
+    <string name="error_ar_not_initialized">AR not initialized</string>
+    <string name="error_waiting_ar">Waiting for AR...</string>
+    <string name="error_move_device">Move device slowly to establish tracking</string>
+    <string name="error_aim_at_surface">Aim reticle at a surface</string>
+    <string name="error_anchor_failed">Anchor creation failed, please retry</string>
+    <string name="error_placement_failed">Placement failed, please retry</string>
+    <string name="error_camera_permission">Camera permission required for AR</string>
+    <string name="error_device_not_supported">This device does not support AR</string>
+    <string name="error_install_arcore">Please install ARCore</string>
+    <string name="error_update_arcore">Please update ARCore</string>
+    <string name="error_update_app">Please update the app</string>
+    <string name="error_ar_resume_failed">AR resume failed, please restart app</string>
+
+    <!-- Toast messages -->
+    <string name="toast_first_point_set">First point set</string>
+</resources>
